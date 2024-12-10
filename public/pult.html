@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пульт управления очередью</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            color: #333;
+        }
+        .queue-table {
+            width: 80%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        .queue-table th, .queue-table td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .button {
+            background-color: #6ab04c;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+            width: 200px;
+        }
+        .button:hover {
+            background-color: #58b368;
+        }
+        #reset-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #eb4d4b;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #reset-btn:hover {
+            background-color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Пульт управления очередью</h1>
+
+    <!-- Таблица очереди -->
+    <table class="queue-table">
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Статус</th>
+                <th>ИИН</th>
+            </tr>
+        </thead>
+        <tbody id="queue-table-body">
+            <!-- Очередь будет динамически обновляться -->
+        </tbody>
+    </table>
+
+    <button id="accept-btn" class="button">Принять</button>
+    <button id="next-btn" class="button">Следующий</button>
+    <button id="reset-btn">Сброс очереди</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const queueList = document.getElementById("queue-table-body");
+
+        function renderQueue(queue) {
+            queueList.innerHTML = ""; // Очищаем таблицу
+            queue.forEach(item => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.ticketNumber}</td>
+                    <td>${item.status}</td>
+                    <td>${item.iin || '—'}</td>
+                `;
+                queueList.appendChild(row);
+            });
+        }
+
+        // Слушаем обновление очереди
+        socket.on("update_queue", renderQueue);
+
+        // Обработчики для кнопок
+        document.getElementById("accept-btn").addEventListener("click", () => {
+            fetch("/accept_queue", { method: "POST" })
+                .then(res => res.json())
+                .then(data => alert(`Принят пациент с номером: ${data.ticketNumber}`))
+                .catch(err => console.error(err));
+        });
+
+        document.getElementById("next-btn").addEventListener("click", () => {
+            fetch("/next_queue", { method: "POST" })
+                .then(() => alert("Следующий пациент вызван"))
+                .catch(err => console.error(err));
+        });
+
+        document.getElementById("reset-btn").addEventListener("click", () => {
+            fetch("/reset_queue", { method: "POST" })
+                .then(() => alert("Очередь сброшена"))
+                .catch(err => console.error(err));
+        });
+    </script>
+</body>
+</html>

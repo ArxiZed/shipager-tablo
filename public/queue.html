@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Очередь</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #d1f2eb;
+            color: #2d3436;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .content {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .table-section {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #d1f2eb; /* Единый фон */
+        }
+        .qr-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #d1f2eb; /* Единый фон */
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 20px;
+        }
+        .header-info {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            line-height: 1.5;
+            font-weight: bold;
+            text-align: center;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #6ab04c;
+            color: white;
+        }
+        tr.highlight {
+            background-color: #b3efb1;
+        }
+        .qr-code {
+            max-width: 80%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .qr-text {
+            font-size: 1.2rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .highlight-bold {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <!-- Секция таблицы -->
+        <div class="table-section">
+            <div class="header-info">
+                412 кабинет<br>
+                Процедурный кабинет для сбора анализа крови<br>
+                Қан тапсырурыға арналган емшара бөлмесі
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Статус</th>
+                        <th>Время бронирования</th>
+                    </tr>
+                </thead>
+                <tbody id="queue-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Секция QR-кода -->
+        <div class="qr-section">
+            <div class="qr-text">
+                <span class="highlight-bold">Қан тапсырурыға арналган емшара</span> бөлмесіне кезекке тұру үшін QR кодын сканерлеңіз
+            </div>
+            <img src="qr-code.png" alt="QR Code" class="qr-code">
+            <div class="qr-text">
+                Отсканируйте QR код, чтобы взять очередь на <span class="highlight-bold">кабинет для сбора анализа крови</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const queueBody = document.getElementById("queue-body");
+
+        // Функция для воспроизведения аудиофайла
+        function playAudio() {
+            const audio = new Audio('accepted.mp3'); // Путь к вашему аудиофайлу
+            audio.play().catch(error => console.error("Ошибка воспроизведения аудио:", error));
+        }
+
+        // Обработчик обновления очереди
+        socket.on("update_queue", (queue) => {
+            queueBody.innerHTML = ""; // Очистка таблицы перед обновлением
+
+            queue.forEach((item) => {
+                const row = document.createElement("tr");
+
+                // Изменяем статус на "Занято", если он "Принят"
+                const status = item.status === "Принят" ? "Занято" : item.status;
+
+                // Добавляем строки с данными о номере, статусе, времени
+                row.innerHTML = `
+                    <td>${item.ticketNumber}</td>
+                    <td>${status}</td>
+                    <td>${item.time}</td>
+                `;
+
+                // Добавляем класс для строк со статусом "Занято"
+                if (status === "Занято") {
+                    row.classList.add("highlight");
+                    playAudio(); // Воспроизведение аудио при смене статуса
+                }
+
+                queueBody.appendChild(row);
+            });
+        });
+    </script>
+</body>
+</html>

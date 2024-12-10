@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бронирование очереди</title>
+    <style>
+        /* Основные стили */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .logo-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            max-width: 90%;
+            flex-wrap: wrap;
+        }
+        .logo-box img {
+            max-height: 180px;
+            margin: 5px;
+            object-fit: contain;
+        }
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 240px;
+            margin: 0 auto;
+        }
+        .button {
+            background-color: #6ab04c;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 170px;
+        }
+        .button:hover {
+            background-color: #58b368;
+        }
+        .receipt {
+            margin-top: 20px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f4f4f4;
+            display: inline-block;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 170px;
+            margin: 0 auto;
+        }
+        .cancel-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 170px;
+        }
+
+        /* Медиазапросы для телефонов */
+        @media (max-width: 768px) {
+            .logo-box {
+                flex-direction: column;
+                padding: 10px;
+            }
+            .logo-box img {
+                max-height: 120px;
+            }
+            .button, .receipt, .cancel-btn {
+                font-size: 0.9rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Медиазапросы для маленьких телефонов */
+        @media (max-width: 480px) {
+            .logo-box {
+                padding: 8px;
+            }
+            .logo-box img {
+                max-height: 90px;
+            }
+            .container {
+                padding: 15px;
+            }
+            .button, .receipt, .cancel-btn {
+                font-size: 0.8rem;
+            }
+            h1 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-box">
+        <img src="logo1.png" alt="Логотип 1">
+        <img src="logo2.png" alt="Логотип 2">
+    </div>
+
+    <div class="container">
+        <h1>Бронирование очереди</h1>
+        <div id="form-container">
+            <label for="iin">Введите ваш ИИН:</label>
+            <input type="text" id="iin" maxlength="12" placeholder="12 цифр">
+        </div>
+        <button id="take-queue-btn" class="button">Взять очередь</button>
+        <div id="receipt" class="receipt" style="display: none;">
+            <p><strong>Номер очереди:</strong> <span id="queue-number"></span></p>
+            <p><strong>ИИН:</strong> <span id="queue-iin"></span></p>
+            <p><strong>Время бронирования:</strong> <span id="queue-time"></span></p>
+            <button id="cancel-btn" class="cancel-btn">Отклонить очередь</button>
+        </div>
+    </div>
+
+    <script>
+    const takeQueueBtn = document.getElementById("take-queue-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+
+    window.onload = async () => {
+    const savedTicket = JSON.parse(localStorage.getItem("ticketData"));
+    if (savedTicket) {
+        try {
+            const response = await fetch("/queue_status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketNumber: savedTicket.ticketNumber }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === "Completed") {
+                    alert("Ваш запрос обработан. Пожалуйста, забронируйте новую очередь.");
+                    localStorage.removeItem("ticketData");
+                    window.location.href = "/";
+                } else {
+                    showReceipt(savedTicket);
+                }
+            } else {
+                throw new Error("Ошибка проверки статуса.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Ваш запрос обработан. Пожалуйста, забронируйте новую очередь.");
+        }
+    }
+};
+
+function showReceipt(ticket) {
+    document.getElementById("receipt").style.display = "block";
+    document.getElementById("queue-number").innerText = ticket.ticketNumber;
+    document.getElementById("queue-iin").innerText = ticket.iin;
+    document.getElementById("queue-time").innerText = ticket.time;
+    document.getElementById("form-container").style.display = "none";
+    document.getElementById("take-queue-btn").style.display = "none";
+}
+
+    takeQueueBtn.addEventListener("click", async () => {
+        const iin = document.getElementById("iin").value;
+        const response = await fetch("/take_queue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ iin })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem("ticketData", JSON.stringify(data));
+            document.getElementById("receipt").style.display = "block";
+            document.getElementById("queue-number").innerText = data.ticketNumber;
+            document.getElementById("queue-iin").innerText = data.iin;
+            document.getElementById("queue-time").innerText = data.time;
+            document.getElementById("form-container").style.display = "none";
+            document.getElementById("take-queue-btn").style.display = "none";
+        } else {
+            alert("Произошла ошибка при бронировании очереди.");
+        }
+    });
+
+    cancelBtn.addEventListener("click", async () => {
+        const savedTicket = JSON.parse(localStorage.getItem("ticketData"));
+        const response = await fetch("/cancel_queue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticketNumber: savedTicket.ticketNumber })
+        });
+
+        if (response.ok) {
+            alert("Очередь отклонена.");
+            localStorage.removeItem("ticketData");
+            window.location.reload();
+        }
+    });
+</script>
+
+</body>
+</html>
